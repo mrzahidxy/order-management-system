@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  isAdmin   Boolean    @default(false)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  orders    Order[] // One-to-Many relationship with Order
+  CartItem  CartItem[]
+}
+
+model Order {
+  id            String         @id @default(cuid())
+  userId        String // Foreign key to the User model
+  user          User           @relation(fields: [userId], references: [id])
+  status        String         @default("PENDING") // PENDING, CONFIRMED, CANCELLED, etc.
+  subtotal      Float
+  totalDiscount Float
+  grandTotal    Float
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  products      OrderProduct[] // One-to-Many relationship with OrderProduct
+}
+
+model OrderProduct {
+  id        String  @id @default(cuid())
+  orderId   String // Foreign key to the Order model
+  order     Order   @relation(fields: [orderId], references: [id])
+  productId String // Foreign key to the Product model
+  product   Product @relation(fields: [productId], references: [id])
+  quantity  Int
+  discount  Float
+}
+
+model Product {
+  id               String             @id @default(cuid())
+  name             String
+  description      String
+  price            Float
+  weight           Float
+  enabled          Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  orders           OrderProduct[] // One-to-Many relationship with OrderProduct
+  PromotionProduct PromotionProduct[] // One-to-Many relationship with PromotionProduct
+  CartItem         CartItem[]
+}
+
+model PromotionProduct {
+  id          String    @id @default(cuid())
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+}
+
+model Promotion {
+  id        String             @id @default(cuid())
+  title     String
+  startDate DateTime
+  endDate   DateTime
+  type      PromotionType
+  discount  Float?
+  slabs     Json? // For weighted promotions
+  enabled   Boolean            @default(true)
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  products  PromotionProduct[] // One-to-Many relationship with PromotionProduct
+}
+
+enum PromotionType {
+  PERCENTAGE
+  FIXED
+  WEIGHTED
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int      @default(1)
+  ordered   Boolean  @default(false) // Tracks if the item is part of an order
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
